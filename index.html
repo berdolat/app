@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="description" content="A personal recipe box that works offline.">
+
+  <!-- iOS standalone (Add to Home Screen) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Recipes">
+  <meta name="format-detection" content="telephone=no">
+  <!-- Updated from app.js to match the current screen colour -->
+  <meta name="theme-color" content="#FAFAF7">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>Recipes</title>
+</head>
+<body>
+  <!-- ========== Grid (home) ========== -->
+  <main id="grid-scroll" class="grid-scroll">
+    <header class="topbar">
+      <div>
+        <h1 class="app-title">Recipes</h1>
+        <p id="count" class="app-count"></p>
+      </div>
+      <div class="topbar-actions">
+        <button id="add-btn" class="round-btn" type="button" aria-label="Add recipe">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button id="menu-btn" class="round-btn" type="button" aria-label="Menu and backup">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section id="empty" class="empty" hidden>
+      <h2>Your recipe box is empty</h2>
+      <p>Tap the card below to add your first recipe. Pinch the grid later to zoom in and out.</p>
+    </section>
+
+    <div id="grid" class="grid" aria-label="Recipes"></div>
+  </main>
+
+  <!-- ========== Recipe viewer ========== -->
+  <section id="viewer" class="viewer" hidden aria-label="Recipe">
+    <div id="viewer-bar" class="viewer-bar">
+      <button id="close-btn" class="round-btn" type="button" aria-label="Back to all recipes">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div class="viewer-actions">
+        <button id="copy-btn" class="round-btn" type="button" aria-label="Copy ingredients">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6.5A2.5 2.5 0 0 1 7.5 4H15"/></svg>
+        </button>
+        <button id="edit-btn" class="round-btn" type="button" aria-label="Edit recipe">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="pager" class="pager"></div>
+  </section>
+
+  <!-- ========== Add / Edit recipe ========== -->
+  <section id="editor" class="editor" hidden role="dialog" aria-modal="true" aria-labelledby="editor-title">
+    <header class="sheet-bar">
+      <button id="cancel-btn" class="text-btn" type="button">Cancel</button>
+      <h2 id="editor-title">New recipe</h2>
+      <button id="save-btn" class="text-btn strong" type="button">Save</button>
+    </header>
+
+    <form id="editor-form" class="sheet-body" novalidate autocomplete="off">
+      <div class="field">
+        <span class="label">Photos</span>
+        <div id="photo-strip" class="photo-strip"></div>
+        <p id="photo-hint" class="hint">A photo is recommended. The first one becomes the cover; tap another to make it the cover.</p>
+      </div>
+
+      <label class="field">
+        <span class="label">Title</span>
+        <input name="title" type="text" maxlength="140" enterkeyhint="next" placeholder="Grandma's lemon cake" aria-describedby="title-error">
+        <span id="title-error" class="field-error" hidden></span>
+      </label>
+
+      <label class="field">
+        <span class="label">Description &amp; method</span>
+        <textarea name="description" rows="7" placeholder="The first paragraph is the short description on the card.&#10;&#10;Leave a blank line, then write the method."></textarea>
+      </label>
+
+      <label class="field">
+        <span class="label">Ingredients <small>· one per line</small></span>
+        <textarea name="ingredients" rows="7" placeholder="200 g flour&#10;3 eggs&#10;1 lemon, zested"></textarea>
+      </label>
+
+      <div class="field">
+        <span class="label" id="swatch-label">Card colour</span>
+        <div id="swatches" class="swatches" role="radiogroup" aria-labelledby="swatch-label"></div>
+      </div>
+
+      <button id="delete-btn" class="delete-btn" type="button" hidden>Delete recipe</button>
+    </form>
+  </section>
+
+  <input id="photo-input" type="file" accept="image/*" multiple hidden>
+  <input id="import-input" type="file" accept=".json,application/json" hidden>
+
+  <dialog id="dialog" class="dialog"></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
