@@ -1,7 +1,7 @@
 /* Offline-first service worker.
  * Bump CACHE_VERSION whenever you change any app file, so phones pick up the update
  * (the new version installs in the background and is used on the next launch). */
-const CACHE_VERSION = 'recipe-box-v1';
+const CACHE_VERSION = 'recipe-box-v11';
 
 const APP_SHELL = [
   './',
@@ -9,6 +9,7 @@ const APP_SHELL = [
   './styles.css',
   './app.js',
   './manifest.json',
+  './starter-recipes.json',
   './icons/squircle.svg',
   './icons/apple-touch-icon.png',
   './icons/icon-192.png',

@@ -11,7 +11,7 @@
 /* ============================== 1. Helpers ============================== */
 
 const $ = (sel, root = document) => root.querySelector(sel);
-const PALETTE_SIZE = 8;               // number of colour pairs in styles.css
+const PALETTE_SIZE = 15;              // number of colour pairs in styles.css
 const EASE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
 const reducedMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
 const reducedMotion = () => reducedMotionQuery.matches;
@@ -39,6 +39,70 @@ const ICONS = {
   x: '<path d="M7 7l10 10M17 7L7 17"/>',
   chevron: '<path d="M6 9l6 6 6-6"/>',
 };
+
+/* Food icons for recipes without a photo (24×24, stroked). */
+const FOOD_ICONS = {
+  soup: '<path d="M3 12h18a9 8 0 0 1-18 0z"/><path d="M9 20h6"/><path d="M9 8c-1-1 1-2 0-3.5M12.5 8c-1-1 1-2 0-3.5M16 8c-1-1 1-2 0-3.5"/>',
+  pot: '<path d="M4 10h16v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M2 12h2M20 12h2M5 7h14M12 4.5V7"/>',
+  curry: '<path d="M3 13h18a9 7 0 0 1-18 0z"/><path d="M6.5 13a5.5 4.5 0 0 1 11 0"/><path d="M16 6.5c1.5-1.5 3.5-1.5 5-1-.5 2-2.5 3-5 2.5"/><path d="M16 7.5l-2 2"/>',
+  pasta: '<path d="M3 15h18a9 5.5 0 0 1-18 0z"/><path d="M5.5 15c0-3.5 3-5 6.5-5s6.5 1.5 6.5 5"/><path d="M8.5 15c0-2 1.5-3 3.5-3s3.5 1 3.5 3M11 15c0-1 2-1 2 0"/><path d="M14 3l-2 8.5M12 3.3l-.9 3.6a1.6 1.6 0 0 0 3.1.7l.9-3.6"/>',
+  lasagna: '<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M3 12h18M3 16h18"/><path d="M5 8c1-2 2.5-2 3.5 0s2.5 2 3.5 0 2.5-2 3.5 0 2.5 2 3.5 0"/>',
+  salad: '<path d="M3 12h18a9 8 0 0 1-18 0z"/><path d="M8 12c-1.5-3 0-6.5 4-7 .5 3.5-1.5 6-4 7z"/><path d="M13 12c0-3 2.5-5.5 7-4.5-1 3-3.5 4.5-7 4.5z"/>',
+  wrap: '<path d="M5 9l7 12 7-12"/><path d="M5 9c0-3 3-5 7-5s7 2 7 5"/><path d="M7.5 8.5c1-1.5 2 .5 3-.5s2 .5 3-.5 2 .5 3 0"/>',
+  cabbage: '<circle cx="12" cy="13" r="8"/><path d="M12 5c-3 3-3 12 0 16M12 5c3 3 3 12 0 16"/><path d="M4.5 11c3 1 5.5 4 7.5 10M19.5 11c-3 1-5.5 4-7.5 10"/>',
+  pumpkin: '<path d="M12 7.5C6.5 7 3.5 10 3.5 14s3.5 6.5 8.5 6.5 8.5-2.5 8.5-6.5-3-7-8.5-6.5z"/><path d="M12 7.5c-2.5 2-2.5 11 0 13M12 7.5c2.5 2 2.5 11 0 13"/><path d="M12 7.5c0-2 1-3.5 3-4"/>',
+  fish: '<path d="M2.5 12c3-5.5 10.5-6.5 14.5 0-4 6.5-11.5 5.5-14.5 0z"/><path d="M17 12l4.5-4v8z"/><path d="M7 11h.01" stroke-width="2.6"/>',
+  potato: '<path d="M6 7c3.5-4 11.5-3 13.5 2.5S19 20 12.5 20 3 17 3 13s1-4 3-6z"/><path d="M9 11h.01M14 9h.01M13.5 15h.01M8.5 16h.01" stroke-width="2.4"/>',
+  bread: '<path d="M5 20v-8.5A3.5 3.5 0 0 1 6.5 5h11a3.5 3.5 0 0 1 1.5 6.5V20z"/><path d="M9 13l2-2M13 15l2-2M9 17l2-2"/>',
+  mushroom: '<path d="M3 12a9 8 0 0 1 18 0z"/><path d="M9 12v6a3 3 0 0 0 6 0v-6"/><path d="M8 8.5h.01M14 7h.01M16.5 10h.01" stroke-width="2.4"/>',
+  meatballs: '<path d="M2 19h20"/><circle cx="7" cy="15" r="3.2"/><circle cx="17" cy="15" r="3.2"/><circle cx="12" cy="9.5" r="3.2"/>',
+  cauliflower: '<path d="M6.5 13a3 3 0 0 1 1-6 4.5 4.5 0 0 1 9 0 3 3 0 0 1 1 6z"/><path d="M6.5 13c0 5 3 8 5.5 8s5.5-3 5.5-8"/><path d="M12 13v8M9 13.5c.5 2 1.5 3.5 3 4.5M15 13.5c-.5 2-1.5 3.5-3 4.5"/>',
+  egg: '<path d="M12 3.5c4.5 0 8.5 3 7.5 8s-2.5 8.5-7.5 8.5S3.5 17 3.5 12 7.5 3.5 12 3.5z"/><circle cx="12" cy="12" r="3"/>',
+  pepper: '<path d="M8 9c-3.5 0-4.5 4.5-3.5 8s4 4.5 7.5 4.5 6.5-1 7.5-4.5S19.5 9 16 9c-1.5 0-2 1-4 1s-2.5-1-4-1z"/><path d="M12 10V7c0-1.5 1-3 3.5-3"/>',
+  aubergine: '<path d="M14 6.5c3.5 1 5 5 2.5 9S9 21.5 6 20s-2-6 1.5-9 4-5.5 6.5-4.5z"/><path d="M14 6.5c0-1.5.5-3 2-4M12 7.5c1.5.5 3 .5 4.5-.5"/>',
+  dumplings: '<path d="M2 19h20"/><path d="M3.5 15.5a3.5 3 0 0 1 7 0v.5h-7z"/><path d="M13.5 15.5a3.5 3 0 0 1 7 0v.5h-7z"/><path d="M8.5 10a3.5 3 0 0 1 7 0v.5h-7z"/><path d="M6 13.5v1M17 13.5v1M12 8v1"/>',
+  chicken: '<ellipse cx="15" cy="9" rx="6.5" ry="4.8" transform="rotate(-45 15 9)"/><path d="M10.6 13.4L6.3 17.7"/><circle cx="4.6" cy="17.9" r="1.7"/><circle cx="6.1" cy="19.4" r="1.7"/>',
+  tomato: '<circle cx="12" cy="13.5" r="7.5"/><path d="M8.5 6.5L12 8l3.5-1.5M12 8V4"/>',
+  dish: '<path d="M3 18h18"/><path d="M5 18a7 7 0 0 1 14 0"/><path d="M12 11V8.5M10 8.5h4"/>',
+};
+
+/* First match wins, so more specific dishes come first. Covers English, German and Dutch words. */
+const FOOD_RULES = [
+  ['fish', /salmon|lachs|zalm|fish|fisch|\bvis\b|tuna|thunfisch|tonijn|\bcod\b|kabeljau|shrimp|garnel/],
+  ['egg', /\beggs?\b|\beier\b|\bei\b|shakshuka|omelet|frittata|\beieren\b/],
+  ['meatballs', /k[öo]ttbullar|meatball|frikadell|gehaktbal|bitterbal|hackbällchen/],
+  ['wrap', /d[öo]ner|kebab|kebap|wrap|burrito|taco|gyros|pita|falafel|shawarma/],
+  ['lasagna', /lasagn/],
+  ['aubergine', /aubergin|eggplant/],
+  ['pepper', /paprika|bell pepper|stuffed pepper|poivron/],
+  ['cauliflower', /cauliflower|blumenkohl|bloemkool|broccoli/],
+  ['cabbage', /wirsing|cabbage|kohl\b|savoy|\bkool\b|sauerkraut|zuurkool|spitzkohl/],
+  ['pumpkin', /pumpkin|k[üu]rbis|pompoen|squash|butternut/],
+  ['mushroom', /mushroom|pilz|champignon|paddenstoel/],
+  ['soup', /soup|suppe|soep|broth|ramen|\bpho\b|chowder|bisque/],
+  ['pasta', /pasta|spaghetti|bolognese|penne|noodle|nudel|carbonara|pesto|ravioli|tagliatelle|macaroni|mac and cheese|spätzle|orzo/],
+  ['dumplings', /gnocchi|kn[öo]del|dumpling|pierogi|kl[öo][ßs]e|gyoza|maultasche/],
+  ['salad', /salad|salat|salade|couscous|bowl|quark|veggies|gem[üu]se|groente|tabouleh|bulgur/],
+  ['chicken', /chicken|h[äa]hnchen|\bhuhn\b|\bkip\b|poulet|drumstick/],
+  ['curry', /curry|dahl|\bdal\b|masala|tikka|korma|biryani|risotto|\brice\b|\breis\b|rijst|paella/],
+  ['potato', /potato|kartoffel|aardappel|kumpir|fries|frites|r[öo]sti|pommes|stamppot/],
+  ['bread', /bread|\bbrot\b|brood|focaccia|toast|pizza|naan|sandwich|bruschetta|baguette|flammkuchen/],
+  ['pot', /chili|goulash|gulasch|gulyas|stew|eintopf|ratatouille|stoofpot|ragout|rag[uù]|tajine|casserole|chili/],
+  ['tomato', /tomat/],
+];
+
+function foodIconName(title = '') {
+  const t = title.toLowerCase();
+  const rule = FOOD_RULES.find(([, re]) => re.test(t));
+  return rule ? rule[0] : 'dish';
+}
+
+/** A large stroked food icon that scales with its box (used where a recipe has no photo). */
+function foodIcon(recipe) {
+  const span = h('span', { class: 'food-icon', 'aria-hidden': 'true' });
+  span.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${FOOD_ICONS[foodIconName(recipe.title)]}</svg>`;
+  return span;
+}
 function icon(name, size = 22, stroke = 2) {
   const span = h('span', { class: 'icon', 'aria-hidden': 'true' });
   span.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
@@ -57,7 +121,7 @@ function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** First paragraph = short description (shown on cards); the rest = method. */
+/** First paragraph = short description (shown on cards); the rest = the recipe steps. */
 function splitDescription(text = '') {
   const parts = text.trim().split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   return { summary: parts[0] || '', method: parts.slice(1) };
@@ -221,6 +285,18 @@ function dataURLToBlob(dataURL) {
 /* =============================== 4. State =============================== */
 
 const ZOOM_KEY = 'recipe-box:zoom';
+// How recipes without a photo look: 'title' (big type fills the card) or 'icon' (food icon).
+const NOPHOTO_KEY = 'recipe-box:nophoto';
+function readNoPhotoStyle() {
+  try { return localStorage.getItem(NOPHOTO_KEY) === 'icon' ? 'icon' : 'title'; } catch { return 'title'; }
+}
+function applyNoPhotoStyle(style) {
+  document.body.classList.toggle('nophoto-title', style === 'title');
+  fitTitles(els.grid);
+  els.pager.querySelectorAll('[data-fit]').forEach((el) => { delete el.dataset.fit; });
+  fitTitles(els.pager);
+  try { localStorage.setItem(NOPHOTO_KEY, style); } catch { /* not important */ }
+}
 // Each zoom level is a minimum column width; the column count follows from the screen width.
 const ZOOM_MIN_WIDTHS = [340, 160, 110, 84, 64];
 const CARD_MODE_MIN_WIDTH = 150;   // narrower columns show photo-only tiles
@@ -281,7 +357,6 @@ const els = {
   scroller: $('#grid-scroll'),
   grid: $('#grid'),
   empty: $('#empty'),
-  count: $('#count'),
   viewer: $('#viewer'),
   bar: $('#viewer-bar'),
   pager: $('#pager'),
@@ -308,19 +383,17 @@ function photoBox(recipe, className) {
   if (recipe.photos.length) {
     box.append(h('img', { src: photoURL(recipe, 0), alt: '', loading: 'lazy', decoding: 'async', draggable: 'false' }));
   } else {
-    box.append(h('span', { class: 'initial', text: (recipe.title.trim()[0] || '?').toUpperCase() }));
+    box.append(foodIcon(recipe));
   }
   return box;
 }
 
 function recipeCard(recipe, index) {
   const { summary } = splitDescription(recipe.description);
-  const n = recipe.ingredients.length;
-  return h('button', { class: `card ${colorClass(recipe)}`, type: 'button', 'data-index': index, 'aria-label': recipe.title },
+  return h('button', { class: `card ${colorClass(recipe)}${recipe.photos.length ? '' : ' no-photo'}`, type: 'button', 'data-index': index, 'aria-label': recipe.title },
     h('div', { class: 'card-inner' },
       h('div', { class: 'card-text' },
         h('h2', { class: 'card-title', text: recipe.title }),
-        n ? h('p', { class: 'card-sub', text: `${plural(n, 'ingredient')} —` }) : null,
         summary ? h('p', { class: 'card-summary', text: summary }) : null),
       photoBox(recipe, 'card-photo')));
 }
@@ -331,7 +404,7 @@ function plusCard() {
     h('div', { class: 'card-inner' },
       h('div', { class: 'card-text' },
         h('h2', { class: 'card-title', text: 'New recipe' }),
-        h('p', { class: 'card-summary', text: 'Add a photo, ingredients and method.' })),
+        h('p', { class: 'card-summary', text: 'Add a photo, ingredients and the recipe.' })),
       photo));
 }
 
@@ -340,10 +413,10 @@ function renderGrid() {
   state.recipes.forEach((r, i) => frag.append(recipeCard(r, i)));
   frag.append(plusCard());
   els.grid.replaceChildren(frag);
+  fitTitles(els.grid);
 
   const n = state.recipes.length;
   els.empty.hidden = n > 0;
-  els.count.textContent = n ? plural(n, 'recipe') : '';
 }
 
 function cssNumber(name, fallback) {
@@ -360,6 +433,40 @@ function applyZoom() {
   const colWidth = (width - (cols - 1) * gap) / cols;
   els.grid.style.setProperty('--cols', cols);
   els.grid.classList.toggle('compact', colWidth < CARD_MODE_MIN_WIDTH);
+  fitTitles(els.grid);
+}
+
+/* --- Big title on the recipe page for recipes without a photo ---
+ * Sized so its longest word fits on one line. (Cards use one fixed size, set in CSS.) */
+function fitTitle(el, maxPx, minPx = 12) {
+  el.style.fontSize = '';
+  if (!el.clientWidth) return;
+  // Words never break inside (CSS: overflow-wrap: normal), so a too-long word shows up as
+  // horizontal overflow. Binary-search the largest size where nothing overflows.
+  const fits = (px) => {
+    el.style.fontSize = `${px}px`;
+    return el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + px * 0.3;
+  };
+  let lo = minPx, hi = maxPx;
+  if (!fits(hi)) {
+    for (let i = 0; i < 9; i++) {
+      const mid = (lo + hi) / 2;
+      if (fits(mid)) lo = mid; else hi = mid;
+    }
+    hi = lo;
+  }
+  // A little breathing room: bold glyphs can overhang their measured width.
+  el.style.fontSize = `${Math.max(minPx, hi * 0.94)}px`;
+}
+function fitTitles(root) {
+  const on = document.body.classList.contains('nophoto-title');
+  root.querySelectorAll('.page.no-photo .page-title').forEach((el) => {
+    const key = on ? String(window.innerWidth) : '';
+    if (el.dataset.fit === key) return;      // already fitted at this width
+    el.dataset.fit = key;
+    if (!on) { el.style.fontSize = ''; return; }
+    fitTitle(el, Math.min(96, window.innerWidth * 0.17), 34);
+  });
 }
 
 /** Changes zoom level and animates cards from old to new positions (FLIP),
@@ -480,7 +587,6 @@ els.grid.addEventListener('click', (e) => {
   else openViewer(Number(card.dataset.index), card);
 });
 
-$('#add-btn').addEventListener('click', () => openEditor(null));
 $('#menu-btn').addEventListener('click', openMenu);
 
 function cardForIndex(index) {
@@ -489,11 +595,10 @@ function cardForIndex(index) {
     : els.grid.querySelector('.card.plus');
 }
 
-/** Scrolls a grid card into view (below the sticky header) if it isn't already. */
+/** Scrolls a grid card into view if it isn't already. */
 function revealCard(card, smooth = false) {
-  const header = $('.topbar').getBoundingClientRect().bottom;
   const r = card.getBoundingClientRect();
-  if (r.top < header || r.bottom > window.innerHeight) {
+  if (r.top < 0 || r.bottom > window.innerHeight) {
     card.scrollIntoView({ block: 'center', behavior: smooth && !reducedMotion() ? 'smooth' : 'auto' });
   }
 }
@@ -565,30 +670,31 @@ function recipePage(recipe, index) {
   const { summary, method } = splitDescription(recipe.description);
   const n = recipe.ingredients.length;
   const inner = h('div', { class: 'page-inner' },
-    h('h1', { class: 'page-title', text: recipe.title }),
-    n ? h('p', { class: 'page-sub', text: `${plural(n, 'ingredient')} —` }) : null,
-    summary ? h('p', { class: 'page-summary', text: summary }) : null);
+    h('h1', { class: 'page-title', 'data-edit': 'title', text: recipe.title }),
+    n ? h('p', { class: 'page-sub', 'data-edit': 'ingredients', text: `${plural(n, 'ingredient')} —` }) : null,
+    summary ? h('p', { class: 'page-summary', 'data-edit': 'summary', text: summary }) : null);
 
-  if (recipe.photos.length) inner.append(carousel(recipe));
+  // No photo: the recipe's food icon takes the photo's place.
+  inner.append(recipe.photos.length ? carousel(recipe)
+    : h('div', { class: 'carousel-wrap icon-wrap' }, photoBox(recipe, 'carousel no-photo')));
 
-  inner.append(h('button', { class: 'fold-hint', type: 'button', 'data-fold': '', 'aria-expanded': 'false' },
-    h('span', { text: n || method.length ? 'Ingredients & method' : 'More' }), icon('chevron', 18, 2.4)));
-
-  const foldInner = h('div', { class: 'fold-inner' });
+  // Ingredients and the recipe are always shown; no tap to unfold.
+  const details = h('div', { class: 'details' });
   if (n) {
-    foldInner.append(h('h3', { class: 'section-title', text: 'Ingredients' }),
-      h('ul', { class: 'ingredients' }, ...recipe.ingredients.map((item) => h('li', { text: item }))));
+    details.append(h('h3', { class: 'section-title', 'data-edit': 'ingredients', text: 'Ingredients' }),
+      h('ul', { class: 'ingredients' }, ...recipe.ingredients.map((item, k) =>
+        h('li', { 'data-edit': 'ingredients', 'data-line': k, text: item }))));
   }
   if (method.length) {
-    foldInner.append(h('h3', { class: 'section-title', text: 'Method' }),
-      h('div', { class: 'method' }, ...method.map((p) => h('p', { text: p }))));
+    details.append(h('h3', { class: 'section-title', 'data-edit': 'recipe', text: 'Recipe' }),
+      h('div', { class: 'method' }, ...method.map((p, k) => h('p', { 'data-edit': 'recipe', 'data-line': k, text: p }))));
   }
   if (!n && !method.length) {
-    foldInner.append(h('p', { class: 'fold-empty', text: 'No ingredients or method yet. Tap the pencil to add them.' }));
+    details.append(h('p', { class: 'fold-empty', 'data-edit': 'ingredients', text: 'No ingredients or recipe yet. Tap here to add them.' }));
   }
-  inner.append(h('div', { class: 'fold' }, foldInner));
+  inner.append(details);
 
-  return h('article', { class: `page ${colorClass(recipe)}`, 'data-index': index }, inner);
+  return h('article', { class: `page ${colorClass(recipe)}${recipe.photos.length ? '' : ' no-photo'}`, 'data-index': index }, inner);
 }
 
 function plusPage() {
@@ -646,6 +752,7 @@ function layoutSlots(dx, animate) {
     el.style.transform = `translate3d(${(k - 1) * w + dx}px, 0, 0)`;
     el.inert = k !== 1;
   });
+  fitTitles(els.pager);
 }
 
 function commitPage(dir) {
@@ -677,24 +784,6 @@ function syncViewerBar() {
   els.copyBtn.hidden = !recipe;
   els.editBtn.hidden = !recipe;
   if (v.slots[1]) setThemeColor(v.slots[1]);
-}
-
-function toggleFold(page) {
-  const open = !page.classList.contains('open');
-  page.classList.toggle('open', open);
-  const hint = page.querySelector('.fold-hint');
-  if (hint) hint.setAttribute('aria-expanded', String(open));
-  if (open) {
-    // If the unfolded content starts low on screen, glide it into view.
-    setTimeout(() => {
-      const top = page.querySelector('.fold').getBoundingClientRect().top;
-      if (top > window.innerHeight * 0.55) {
-        page.scrollBy({ top: top - window.innerHeight * 0.3, behavior: reducedMotion() ? 'auto' : 'smooth' });
-      }
-    }, 80);
-  } else if (page.scrollTop > 0) {
-    page.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' });
-  }
 }
 
 // --- Swipe gestures (pointer events). We lock to an axis after a few pixels:
@@ -786,7 +875,7 @@ function endSwipe(e, cancelled) {
 els.pager.addEventListener('pointerup', (e) => endSwipe(e, false));
 els.pager.addEventListener('pointercancel', (e) => endSwipe(e, true));
 
-// Taps: dots switch photos, the "+" page adds a recipe, anywhere else on a recipe (un)folds it.
+// Taps: dots switch photos, the "+" page adds a recipe.
 els.pager.addEventListener('click', (e) => {
   if (gesture.suppressClick) { gesture.suppressClick = false; return; }
   const dot = e.target.closest('[data-dot]');
@@ -796,9 +885,35 @@ els.pager.addEventListener('click', (e) => {
   }
   const page = e.target.closest('.page');
   if (!page || page.inert) return;
-  if (page.hasAttribute('data-plus')) openEditor(null);
-  else toggleFold(page);
+  if (page.hasAttribute('data-plus')) { openEditor(null); return; }
+  // Tapping any text jumps straight into editing that text.
+  const target = e.target.closest('[data-edit]');
+  const recipe = state.recipes[Number(page.dataset.index)];
+  if (target && recipe) {
+    openEditor(recipe);
+    focusEditorField(target.dataset.edit, target.dataset.line === undefined ? -1 : Number(target.dataset.line));
+  }
 });
+
+/** Puts the cursor in an editor field: at the end of line/paragraph `line` (or of the whole field).
+ *  Runs inside the tap, so iOS also opens the keyboard. */
+function focusEditorField(name, line = -1) {
+  const field = els.form.elements[name];
+  if (!field) return;
+  let pos = field.value.length;
+  if (line >= 0) {
+    const sep = name === 'recipe' ? '\n\n' : '\n';
+    const parts = field.value.split(sep);
+    if (line < parts.length) pos = parts.slice(0, line + 1).join(sep).length;
+  }
+  field.focus({ preventScroll: true });
+  try { field.setSelectionRange(pos, pos); } catch { /* not a text field */ }
+  // Once the sheet has slid up and fields have grown to fit, bring the field into view.
+  setTimeout(() => {
+    const top = field.getBoundingClientRect().top - els.form.getBoundingClientRect().top + els.form.scrollTop;
+    els.form.scrollTo({ top: Math.max(0, top - 120), behavior: reducedMotion() ? 'auto' : 'smooth' });
+  }, duration(360));
+}
 
 $('#close-btn').addEventListener('click', () => closeViewer());
 els.copyBtn.addEventListener('click', () => {
@@ -815,7 +930,7 @@ els.editBtn.addEventListener('click', () => {
 function editorSnapshot() {
   const ed = state.editor;
   const f = els.form.elements;
-  return JSON.stringify([f.title.value, f.description.value, f.ingredients.value, ed.color, ed.photos.map((p) => p.blob.size)]);
+  return JSON.stringify([f.title.value, f.summary.value, f.recipe.value, f.ingredients.value, ed.color, ed.photos.map((p) => p.blob.size)]);
 }
 
 function openEditor(recipe) {
@@ -827,8 +942,10 @@ function openEditor(recipe) {
     saving: false,
   };
   const f = els.form.elements;
+  const { summary, method } = splitDescription(recipe ? recipe.description : '');
   f.title.value = recipe ? recipe.title : '';
-  f.description.value = recipe ? recipe.description : '';
+  f.summary.value = summary;
+  f.recipe.value = method.join('\n\n');
   f.ingredients.value = recipe ? recipe.ingredients.join('\n') : '';
   els.editorTitle.textContent = recipe ? 'Edit recipe' : 'New recipe';
   els.deleteBtn.hidden = !recipe;
@@ -837,14 +954,40 @@ function openEditor(recipe) {
   setTitleError('');
   renderPhotoStrip();
   renderSwatches();
+  applyEditorColor();
   state.editor.snapshot = editorSnapshot();
 
   els.form.scrollTop = 0;
   els.editor.hidden = false;
   // Next frame(s): add the class so the slide-up transition runs.
   requestAnimationFrame(() => requestAnimationFrame(() => els.editor.classList.add('is-open')));
-  setThemeColor(els.editor);
+  requestAnimationFrame(autosizeAll);
 }
+
+/** The editor takes on the colour of the card being edited, and changes live with the swatches. */
+function applyEditorColor() {
+  const ed = state.editor;
+  for (let k = 1; k <= PALETTE_SIZE; k++) els.editor.classList.toggle(`c${k}`, k === ed.color + 1);
+  const bg = getComputedStyle(els.editor).getPropertyValue('--c-bg').trim();
+  if (bg) els.themeMeta.setAttribute('content', bg);
+}
+
+/** Text fields grow with their content, so the page reads like a card rather than a form. */
+function autosize(el) {
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight + 2}px`;
+}
+function autosizeAll() { els.form.querySelectorAll('textarea').forEach(autosize); }
+els.form.addEventListener('input', (e) => { if (e.target.matches('textarea')) autosize(e.target); });
+window.addEventListener('resize', () => { if (state.editor) autosizeAll(); });
+
+// The title and short description are single paragraphs: Return moves on instead of adding a line.
+els.form.elements.title.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); els.form.elements.summary.focus(); }
+});
+els.form.elements.summary.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); els.form.elements.ingredients.focus(); }
+});
 
 function closeEditor() {
   const ed = state.editor;
@@ -903,7 +1046,7 @@ function renderSwatches() {
   els.swatches.replaceChildren(...Array.from({ length: PALETTE_SIZE }, (_, k) =>
     h('button', {
       class: `swatch c${k + 1}`, type: 'button', role: 'radio', 'data-color': k,
-      'aria-checked': String(k === ed.color), 'aria-label': `Colour ${k + 1}`, text: 'Aa',
+      'aria-checked': String(k === ed.color), 'aria-label': `Colour ${k + 1}`,
     })));
 }
 
@@ -931,6 +1074,7 @@ els.swatches.addEventListener('click', (e) => {
   if (!swatch || !state.editor) return;
   state.editor.color = Number(swatch.dataset.color);
   renderSwatches();
+  applyEditorColor();
 });
 
 // Photos are compressed as soon as they're picked, so Save is instant and memory stays low.
@@ -968,7 +1112,7 @@ async function saveEditor() {
   if (ed.pending) { toast('Still processing photos…'); return; }
 
   const f = els.form.elements;
-  const title = f.title.value.trim();
+  const title = f.title.value.replace(/\s+/g, ' ').trim();
   if (!title) {
     setTitleError('Give your recipe a title.');
     f.title.focus();
@@ -983,7 +1127,7 @@ async function saveEditor() {
   const recipe = {
     id: ed.recipe ? ed.recipe.id : uid(),
     title,
-    description: f.description.value.trim(),
+    description: [f.summary.value.replace(/\s+/g, ' ').trim(), f.recipe.value.trim()].filter(Boolean).join('\n\n'),
     ingredients: parseIngredients(f.ingredients.value),
     photos: ed.photos.map((p) => p.blob),
     color: ed.color,
@@ -1229,6 +1373,39 @@ els.importInput.addEventListener('change', async () => {
     : toWrite.length ? `Imported ${plural(toWrite.length, 'recipe')}` : 'Everything was already up to date');
 });
 
+/** Adds the bundled starter recipes (starter-recipes.json). Fixed ids mean it never
+ *  duplicates: recipes already on the device are skipped, so it's safe to tap twice. */
+const OLD_STARTER_STAMP = 1763596800000;
+async function addStarterRecipes() {
+  let starters;
+  try {
+    const res = await fetch('starter-recipes.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    starters = parseBackup(await res.json());
+  } catch (err) {
+    toast('Couldn’t load the starter recipes. Open the app once while online, then try again.', { error: true });
+    return;
+  }
+  // The first starter list (ids "starter-NN") was replaced. Old starters you never edited or
+  // added photos to are removed; ones you changed are kept.
+  const outdated = state.recipes.filter((r) => /^starter-\d+$/.test(r.id)
+    && r.updatedAt === OLD_STARTER_STAMP && !r.photos.length);
+  const have = new Set(state.recipes.map((r) => r.id));
+  const missing = starters.filter((r) => !have.has(r.id));
+  if (!missing.length && !outdated.length) { toast('All starter recipes are already here'); return; }
+  try {
+    for (const r of outdated) await db.delete(r.id);
+    if (missing.length) await db.bulkPut(missing);
+    await loadRecipes();
+  } catch (err) {
+    toast(storageErrorMessage(err, 'add the starter recipes'), { error: true });
+    return;
+  }
+  renderGrid();
+  toast(`Added ${plural(missing.length, 'recipe')}`);
+}
+$('#starter-btn').addEventListener('click', addStarterRecipes);
+
 async function storageSummary() {
   try {
     const persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false;
@@ -1256,15 +1433,28 @@ async function openMenu() {
   bigger.addEventListener('click', () => { setZoom(state.zoom - 1); syncZoomButtons(); });
   syncZoomButtons();
 
+  const styleBtn = (style, label) => {
+    const b = h('button', { type: 'button', text: label, 'aria-pressed': String(readNoPhotoStyle() === style) });
+    b.addEventListener('click', () => {
+      applyNoPhotoStyle(style);
+      b.parentNode.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    });
+    return b;
+  };
+
   await ask({
     title: 'Recipe Box',
     body: h('div', {},
       h('div', { class: 'zoom-row' }, h('span', { text: 'Card size' }), h('div', { class: 'segmented' }, smaller, bigger)),
+      h('div', { class: 'zoom-row' }, h('span', { text: 'No photo' }),
+        h('div', { class: 'segmented text', role: 'group', 'aria-label': 'Recipes without a photo show' },
+          styleBtn('icon', 'Icon'), styleBtn('title', 'Title'))),
       note),
     actions: [
       { label: 'Export backup', value: 'export', run: () => exportBackup() },
       // The file picker must open synchronously inside the tap (iOS rule), hence `run`.
       { label: 'Import backup', value: 'import', run: () => els.importInput.click() },
+      { label: 'Add starter recipes', value: 'starter', run: () => addStarterRecipes() },
       { label: 'Done', value: 'cancel', style: 'cancel' },
     ],
   });
@@ -1372,6 +1562,7 @@ async function requestPersistentStorage() {
 }
 
 async function init() {
+  applyNoPhotoStyle(readNoPhotoStyle());
   applyZoom();
   setThemeColor();
   renderGrid();   // show the "+" card immediately
