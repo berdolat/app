@@ -1,7 +1,7 @@
 /* Offline-first service worker.
  * Bump CACHE_VERSION whenever you change any app file, so phones pick up the update
  * (the new version installs in the background and is used on the next launch). */
-const CACHE_VERSION = 'recipe-box-v11';
+const CACHE_VERSION = 'recipe-box-v12';
 
 const APP_SHELL = [
   './',

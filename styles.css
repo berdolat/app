@@ -230,6 +230,7 @@ img { display: block; -webkit-user-drag: none; }
 }
 
 .grid {
+  position: relative;            /* cards measure their offsets from the grid */
   display: grid;
   grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
   gap: var(--gap-card);
@@ -334,6 +335,43 @@ img { display: block; -webkit-user-drag: none; }
 .grid.compact .card-photo { background: var(--c-bg); }
 .grid.compact .card.plus .card-photo { background: var(--surface-2); }
 
+/* Fully zoomed out: tiles are tiny, so a gentler corner reads better */
+.grid[data-zoom="4"] { --squircle: 11%; }
+.nophoto-title .grid.compact[data-zoom="4"] .card.no-photo .card-title { font-size: 11cqi; }
+
+/* Fully zoomed in: one full-width card at a time in a native horizontal carousel,
+   with a sliver of the next card peeking in. Pinch in to go back to the grid. */
+.grid-scroll.is-carousel { overflow: hidden; display: flex; flex-direction: column; padding-bottom: 0; }
+.grid-scroll.is-carousel .empty { flex: none; }
+.grid.carousel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(env(safe-area-inset-top) + 12px) max(20px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 84px) max(20px, env(safe-area-inset-left));
+  scroll-padding-inline: max(20px, env(safe-area-inset-left));
+}
+.grid.carousel::-webkit-scrollbar { display: none; }
+.grid.carousel .card {
+  flex: 0 0 min(100%, 520px);
+  height: 100%;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+.grid.carousel .card:active { transform: none; }
+.grid.carousel .card-inner { height: 100%; }
+.grid.carousel .card-text { flex: none; }
+.grid.carousel .card-photo { flex: 1; min-height: 0; aspect-ratio: auto; }
+.grid.carousel .card-summary { -webkit-line-clamp: 4; }
+.nophoto-title .grid.carousel .card.no-photo .card-inner { min-height: 0; }
+.nophoto-title .grid.carousel .card.no-photo .card-text { flex: 1; }
+
 /* "Title" style for recipes without a photo (⋯ → No photo → Title):
    no photo box, the title grows to fill the card instead. */
 .nophoto-title .card.no-photo .card-photo { display: none; }
@@ -399,24 +437,34 @@ img { display: block; -webkit-user-drag: none; }
 }
 
 .pager {
+  /* One page per recipe in a native horizontal scroller that snaps page by page */
   position: absolute;
   inset: 0;
-  touch-action: pan-y;   /* vertical scroll stays native, horizontal swipes are ours */
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+.pager::-webkit-scrollbar { display: none; }
 
 .page {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;          /* a fast flick still moves one recipe */
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
   background: var(--c-bg);
   color: var(--c-fg);
-  will-change: transform;
   -webkit-user-select: none;
   user-select: none;
-  cursor: pointer;
 }
 
 .page-inner {
@@ -439,14 +487,28 @@ img { display: block; -webkit-user-drag: none; }
 
 .carousel-wrap { margin-top: 28px; }
 .carousel {
+  /* Photos: a native horizontal scroller, one photo per snap */
   position: relative;
   width: 100%;
   aspect-ratio: 1;
-  overflow: hidden;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
   background: color-mix(in srgb, var(--c-fg) 14%, var(--c-bg));
 }
-.track { display: flex; height: 100%; will-change: transform; }
-.track img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.carousel::-webkit-scrollbar { display: none; }
+.carousel img {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  -webkit-user-drag: none;
+}
+.carousel.no-photo { overflow: hidden; }
 
 .dots { display: flex; justify-content: center; }
 .dot {

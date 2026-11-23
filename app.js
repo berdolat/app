@@ -304,7 +304,7 @@ const CARD_MODE_MIN_WIDTH = 150;   // narrower columns show photo-only tiles
 const state = {
   recipes: [],          // sorted by createdAt (grid order)
   zoom: readZoom(),
-  viewer: { open: false, index: 0, slots: [], busy: false },
+  viewer: { open: false, index: 0 },
   editor: null,
 };
 
@@ -431,8 +431,12 @@ function applyZoom() {
   const min = ZOOM_MIN_WIDTHS[state.zoom];
   const cols = Math.max(1, Math.floor((width + gap) / (min + gap)));
   const colWidth = (width - (cols - 1) * gap) / cols;
+  const isCarousel = state.zoom === 0;       // fully zoomed in: swipeable full-width cards
   els.grid.style.setProperty('--cols', cols);
-  els.grid.classList.toggle('compact', colWidth < CARD_MODE_MIN_WIDTH);
+  els.grid.dataset.zoom = state.zoom;
+  els.grid.classList.toggle('carousel', isCarousel);
+  els.scroller.classList.toggle('is-carousel', isCarousel);
+  els.grid.classList.toggle('compact', !isCarousel && colWidth < CARD_MODE_MIN_WIDTH);
   fitTitles(els.grid);
 }
 
@@ -484,8 +488,10 @@ function setZoom(level, anchor) {
     if (r.bottom > -100 && r.top < viewH + 100) first.set(card, r);
   }
 
+  const wasCarousel = state.zoom === 0;
   let anchorCard = null;
-  if (anchor) {
+  if (wasCarousel) anchorCard = centeredCard();
+  else if (anchor) {
     const hit = document.elementFromPoint(anchor.x, anchor.y);
     anchorCard = hit && hit.closest('.card');
   }
@@ -496,6 +502,21 @@ function setZoom(level, anchor) {
   state.zoom = level;
   saveZoom();
   applyZoom();
+
+  // Switching between the carousel and the grid: jump to the same card and cross-fade.
+  if (wasCarousel !== (level === 0)) {
+    if (level === 0) {
+      els.grid.scrollLeft = anchorCard.offsetLeft - (els.grid.clientWidth - anchorCard.offsetWidth) / 2;
+    } else {
+      els.scroller.scrollTop = 0;
+      els.scroller.scrollTop = anchorCard.getBoundingClientRect().top - window.innerHeight / 3;
+    }
+    if (!reducedMotion()) {
+      els.grid.animate([{ opacity: 0, transform: `scale(${level === 0 ? 0.92 : 1.06})` }, { opacity: 1, transform: 'none' }],
+        { duration: 300, easing: EASE });
+    }
+    return true;
+  }
 
   // Keep the anchor card at the same vertical position after the reflow.
   els.scroller.scrollTop += anchorCard.getBoundingClientRect().top - anchorTop;
@@ -595,12 +616,27 @@ function cardForIndex(index) {
     : els.grid.querySelector('.card.plus');
 }
 
-/** Scrolls a grid card into view if it isn't already. */
+/** Scrolls a grid card into view if it isn't already (sideways in the carousel). */
 function revealCard(card, smooth = false) {
-  const r = card.getBoundingClientRect();
-  if (r.top < 0 || r.bottom > window.innerHeight) {
-    card.scrollIntoView({ block: 'center', behavior: smooth && !reducedMotion() ? 'smooth' : 'auto' });
+  const behavior = smooth && !reducedMotion() ? 'smooth' : 'auto';
+  if (els.grid.classList.contains('carousel')) {
+    const left = card.offsetLeft - (els.grid.clientWidth - card.offsetWidth) / 2;
+    if (Math.abs(els.grid.scrollLeft - left) > 2) els.grid.scrollTo({ left, behavior });
+    return;
   }
+  const r = card.getBoundingClientRect();
+  if (r.top < 0 || r.bottom > window.innerHeight) card.scrollIntoView({ block: 'center', behavior });
+}
+
+/** The card closest to the middle of the carousel. */
+function centeredCard() {
+  const mid = els.grid.scrollLeft + els.grid.clientWidth / 2;
+  let best = null, dist = Infinity;
+  for (const c of els.grid.children) {
+    const d = Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid);
+    if (d < dist) { dist = d; best = c; }
+  }
+  return best;
 }
 
 /* =========================== 6. Recipe viewer =========================== */
@@ -630,7 +666,7 @@ function openViewer(index, originEl) {
     // Grow the viewer out of the tapped card by animating its clip-path.
     els.viewer.animate([{ clipPath: clipForRect(originEl.getBoundingClientRect()) }, { clipPath: FULL_CLIP }],
       { duration: 380, easing: EASE });
-    const content = v.slots[1] && v.slots[1].firstElementChild;
+    const content = currentPage() && currentPage().firstElementChild;
     if (content) {
       content.animate([{ opacity: 0, transform: 'translateY(18px) scale(0.97)' }, { opacity: 1, transform: 'none' }],
         { duration: 380, easing: EASE });
@@ -652,7 +688,7 @@ async function closeViewer({ fade = false } = {}) {
     revealCard(card);
     anim = els.viewer.animate([{ clipPath: FULL_CLIP }, { clipPath: clipForRect(card.getBoundingClientRect()) }],
       { duration: 320, easing: EASE });
-    const content = v.slots[1] && v.slots[1].firstElementChild;
+    const content = currentPage() && currentPage().firstElementChild;
     if (content) content.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(0.97)' }], { duration: 200, fill: 'forwards' });
     els.bar.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: 'forwards' });
   } else {
@@ -661,7 +697,6 @@ async function closeViewer({ fade = false } = {}) {
   await anim.finished.catch(() => {});
   els.viewer.hidden = true;
   els.pager.replaceChildren();
-  v.slots = [];
   els.bar.getAnimations().forEach((a) => a.cancel());
   setThemeColor();
 }
@@ -706,9 +741,12 @@ function plusPage() {
 }
 
 function carousel(recipe) {
-  const track = h('div', { class: 'track' },
-    ...recipe.photos.map((_, k) => h('img', { src: photoURL(recipe, k), alt: k === 0 ? recipe.title : '', draggable: 'false', decoding: 'async' })));
-  const box = h('div', { class: 'carousel squircle', 'data-i': '0', 'data-count': recipe.photos.length }, track);
+  // A natively scrolling strip of photos that snaps one photo at a time.
+  const box = h('div', { class: 'carousel squircle', 'data-i': '0', 'data-count': recipe.photos.length },
+    ...recipe.photos.map((_, k) => h('img', {
+      src: photoURL(recipe, k), alt: k === 0 ? recipe.title : '', draggable: 'false', decoding: 'async', loading: k ? 'lazy' : 'eager',
+    })));
+  if (recipe.photos.length > 1) box.addEventListener('scroll', () => syncDots(box), { passive: true });
   const wrap = h('div', { class: 'carousel-wrap' }, box);
   if (recipe.photos.length > 1) {
     wrap.append(h('div', { class: 'dots' },
@@ -720,13 +758,17 @@ function carousel(recipe) {
   return wrap;
 }
 
-function setCarousel(box, i, animate = true) {
+function setCarousel(box, i) {
   const count = Number(box.dataset.count);
   i = Math.max(0, Math.min(count - 1, i));
+  box.scrollTo({ left: i * box.clientWidth, behavior: reducedMotion() ? 'auto' : 'smooth' });
+}
+
+/** Keeps the photo dots in step with the photo strip's scroll position. */
+function syncDots(box) {
+  const i = Math.round(box.scrollLeft / Math.max(1, box.clientWidth));
+  if (String(i) === box.dataset.i) return;
   box.dataset.i = i;
-  const track = box.firstElementChild;
-  track.style.transition = animate ? `transform ${duration()}ms ${EASE}` : 'none';
-  track.style.transform = `translate3d(${-i * 100}%, 0, 0)`;
   box.parentElement.querySelectorAll('.dot').forEach((d, k) => d.setAttribute('aria-current', String(k === i)));
 }
 
@@ -736,46 +778,40 @@ function makePage(i) {
   return i === n ? plusPage() : recipePage(state.recipes[i], i);
 }
 
-/* The pager keeps three slots: previous, current, next. Swiping moves all three. */
-function buildPager() {
-  const v = state.viewer;
-  v.slots = [makePage(v.index - 1), makePage(v.index), makePage(v.index + 1)];
-  els.pager.replaceChildren(...v.slots.filter(Boolean));
-  layoutSlots(0, false);
+/* The viewer is one horizontal, natively scrolling strip with a page per recipe (plus the "+" page),
+ * snapping one page at a time. Native scrolling is what makes swiping feel right on iOS. */
+function currentPage() {
+  return els.pager.children[state.viewer.index] || null;
 }
 
-function layoutSlots(dx, animate) {
-  const w = els.pager.clientWidth;
-  state.viewer.slots.forEach((el, k) => {
-    if (!el) return;
-    el.style.transition = animate ? `transform ${duration()}ms ${EASE}` : 'none';
-    el.style.transform = `translate3d(${(k - 1) * w + dx}px, 0, 0)`;
-    el.inert = k !== 1;
-  });
+function buildPager() {
+  const v = state.viewer;
+  const pages = [];
+  for (let i = 0; i <= state.recipes.length; i++) pages.push(makePage(i));
+  els.pager.replaceChildren(...pages);
+  scrollToPage(v.index, false);
   fitTitles(els.pager);
 }
 
-function commitPage(dir) {
-  const v = state.viewer;
-  v.busy = true;
-  layoutSlots(-dir * els.pager.clientWidth, true);
-  setTimeout(() => {
-    if (dir > 0) {
-      if (v.slots[0]) v.slots[0].remove();
-      v.index += 1;
-      v.slots = [v.slots[1], v.slots[2], makePage(v.index + 1)];
-      if (v.slots[2]) els.pager.append(v.slots[2]);
-    } else {
-      if (v.slots[2]) v.slots[2].remove();
-      v.index -= 1;
-      v.slots = [makePage(v.index - 1), v.slots[0], v.slots[1]];
-      if (v.slots[0]) els.pager.prepend(v.slots[0]);
-    }
-    layoutSlots(0, false);
-    syncViewerBar();
-    v.busy = false;
-  }, duration() + 20);
+function scrollToPage(index, smooth) {
+  const w = els.pager.clientWidth;
+  els.pager.scrollTo({ left: index * w, behavior: smooth && !reducedMotion() ? 'smooth' : 'instant' });
 }
+
+/** Which page is (mostly) on screen; updates the toolbar colour as you swipe. */
+function onPagerScroll() {
+  const v = state.viewer;
+  if (!v.open) return;
+  const i = Math.round(els.pager.scrollLeft / Math.max(1, els.pager.clientWidth));
+  if (i === v.index || i < 0 || i > state.recipes.length) return;
+  v.index = i;
+  syncViewerBar();
+}
+let pagerTick = 0;
+els.pager.addEventListener('scroll', () => {
+  if (pagerTick) return;
+  pagerTick = requestAnimationFrame(() => { pagerTick = 0; onPagerScroll(); });
+}, { passive: true });
 
 function syncViewerBar() {
   const v = state.viewer;
@@ -783,108 +819,18 @@ function syncViewerBar() {
   els.bar.className = `viewer-bar ${recipe ? colorClass(recipe) : 'neutral'}`;
   els.copyBtn.hidden = !recipe;
   els.editBtn.hidden = !recipe;
-  if (v.slots[1]) setThemeColor(v.slots[1]);
+  if (currentPage()) setThemeColor(currentPage());
 }
-
-// --- Swipe gestures (pointer events). We lock to an axis after a few pixels:
-// vertical → let the browser scroll; horizontal → drag the photo carousel or the pager.
-const gesture = { id: null, suppressClick: false };
-const SWIPE_VELOCITY = 0.35;  // px/ms (~350px/s) counts as a flick
-const SWIPE_DISTANCE = 0.3;   // or dragged 30% of the width
-
-els.pager.addEventListener('pointerdown', (e) => {
-  gesture.suppressClick = false;
-  if (state.viewer.busy || gesture.id !== null) return;
-  if (e.pointerType === 'mouse' && e.button !== 0) return;
-  Object.assign(gesture, {
-    id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0, lock: null, mode: null,
-    box: e.target.closest('.carousel'), samples: [{ x: e.clientX, t: e.timeStamp }],
-  });
-});
-
-els.pager.addEventListener('pointermove', (e) => {
-  const g = gesture;
-  if (e.pointerId !== g.id) return;
-  const dx = e.clientX - g.x0;
-  const dy = e.clientY - g.y0;
-
-  if (!g.lock) {
-    if (Math.hypot(dx, dy) < 8) return;
-    g.lock = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'x' : 'y';
-    if (g.lock === 'y') { g.id = null; return; }      // native vertical scroll takes over
-    try { els.pager.setPointerCapture(e.pointerId); } catch { /* ignore */ }
-    g.mode = pickDragTarget(g.box, dx);
-  }
-
-  g.dx = dx;
-  g.samples.push({ x: e.clientX, t: e.timeStamp });
-  while (g.samples.length > 2 && e.timeStamp - g.samples[0].t > 100) g.samples.shift();
-
-  if (g.mode === 'carousel') {
-    const track = g.box.firstElementChild;
-    track.style.transition = 'none';
-    track.style.transform = `translate3d(calc(${-Number(g.box.dataset.i) * 100}% + ${dx}px), 0, 0)`;
-  } else {
-    layoutSlots(resistance(dx), false);
-  }
-});
-
-/** The photo carousel gets the drag unless it's already at its first/last photo. */
-function pickDragTarget(box, dx) {
-  if (box && Number(box.dataset.count) > 1) {
-    const i = Number(box.dataset.i);
-    if ((dx < 0 && i < Number(box.dataset.count) - 1) || (dx > 0 && i > 0)) return 'carousel';
-  }
-  return 'pager';
-}
-
-/** Rubber-band effect when there's nothing to swipe to. */
-function resistance(dx) {
-  const [prev, , next] = state.viewer.slots;
-  return (dx > 0 && !prev) || (dx < 0 && !next) ? dx * 0.3 : dx;
-}
-
-function endSwipe(e, cancelled) {
-  const g = gesture;
-  if (e.pointerId !== g.id) return;
-  g.id = null;
-  if (g.lock !== 'x') return;
-  g.suppressClick = true;
-
-  const first = g.samples[0];
-  const last = g.samples[g.samples.length - 1];
-  const velocity = cancelled || last.t === first.t ? 0 : (last.x - first.x) / (last.t - first.t);
-  const dx = cancelled ? 0 : g.dx;
-
-  if (g.mode === 'carousel') {
-    const w = g.box.clientWidth;
-    const i = Number(g.box.dataset.i);
-    let next = i;
-    if (dx < 0 && (dx < -w * 0.25 || velocity < -SWIPE_VELOCITY)) next = i + 1;
-    else if (dx > 0 && (dx > w * 0.25 || velocity > SWIPE_VELOCITY)) next = i - 1;
-    setCarousel(g.box, next);
-    return;
-  }
-
-  const w = els.pager.clientWidth;
-  const [prev, , next] = state.viewer.slots;
-  if (next && dx < 0 && (dx < -w * SWIPE_DISTANCE || velocity < -SWIPE_VELOCITY)) commitPage(1);
-  else if (prev && dx > 0 && (dx > w * SWIPE_DISTANCE || velocity > SWIPE_VELOCITY)) commitPage(-1);
-  else layoutSlots(0, true);
-}
-els.pager.addEventListener('pointerup', (e) => endSwipe(e, false));
-els.pager.addEventListener('pointercancel', (e) => endSwipe(e, true));
 
 // Taps: dots switch photos, the "+" page adds a recipe.
 els.pager.addEventListener('click', (e) => {
-  if (gesture.suppressClick) { gesture.suppressClick = false; return; }
   const dot = e.target.closest('[data-dot]');
   if (dot) {
     setCarousel(dot.closest('.carousel-wrap').querySelector('.carousel'), Number(dot.dataset.dot));
     return;
   }
   const page = e.target.closest('.page');
-  if (!page || page.inert) return;
+  if (!page) return;
   if (page.hasAttribute('data-plus')) { openEditor(null); return; }
   // Tapping any text jumps straight into editing that text.
   const target = e.target.closest('[data-edit]');
@@ -999,7 +945,7 @@ function closeEditor() {
     if (!state.editor) els.editor.hidden = true;
     ed.photos.forEach((p) => URL.revokeObjectURL(p.url));
   }, duration(340));
-  if (state.viewer.open && state.viewer.slots[1]) setThemeColor(state.viewer.slots[1]);
+  if (state.viewer.open && currentPage()) setThemeColor(currentPage());
   else setThemeColor();
 }
 
@@ -1526,9 +1472,10 @@ document.addEventListener('keydown', (e) => {
   }
   const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement && document.activeElement.tagName);
   if (typing || state.editor) return;
-  if (state.viewer.open && !state.viewer.busy) {
-    if (e.key === 'ArrowRight' && state.viewer.slots[2]) commitPage(1);
-    if (e.key === 'ArrowLeft' && state.viewer.slots[0]) commitPage(-1);
+  if (state.viewer.open) {
+    const v = state.viewer;
+    if (e.key === 'ArrowRight' && v.index < state.recipes.length) scrollToPage(v.index + 1, true);
+    if (e.key === 'ArrowLeft' && v.index > 0) scrollToPage(v.index - 1, true);
   } else if (!state.viewer.open) {
     if (e.key === '+' || e.key === '=') setZoom(state.zoom - 1);
     if (e.key === '-') setZoom(state.zoom + 1);
@@ -1537,13 +1484,13 @@ document.addEventListener('keydown', (e) => {
 
 window.addEventListener('resize', () => {
   applyZoom();
-  if (state.viewer.open) layoutSlots(0, false);
+  if (state.viewer.open) { scrollToPage(state.viewer.index, false); fitTitles(els.pager); }
 });
 
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   requestAnimationFrame(() => {
     if (state.editor) setThemeColor(els.editor);
-    else if (state.viewer.open && state.viewer.slots[1]) setThemeColor(state.viewer.slots[1]);
+    else if (state.viewer.open && currentPage()) setThemeColor(currentPage());
     else setThemeColor();
   });
 });
